@@ -4,7 +4,7 @@ import Combine
 
 final class CombineReplaceWithPublisherTests: XCTestCase {
     
-    func testReplaceEmpty() {
+    func testReplaceEmptyHandling() {
         var cancellable = Set<AnyCancellable>()
         var result: String?
         
@@ -17,20 +17,74 @@ final class CombineReplaceWithPublisherTests: XCTestCase {
         XCTAssertEqual(result, "5")
     }
     
-    func testReplaceFailure() {
+    func testReplaceEmptyNotHandling() {
         var cancellable = Set<AnyCancellable>()
         var result: String?
         
-        Result<String, Error>.Publisher(.failure(NSError()))
+        Just(Optional<String>.some("4"))
+            .compactMap({ $0 })
+            .replaceEmpty(Just("5"))
+            .sink(receiveValue: { result = $0 })
+            .store(in: &cancellable)
+        
+        XCTAssertEqual(result, "4")
+    }
+    
+    func testReplaceEmptyChain() {
+        var cancellable = Set<AnyCancellable>()
+        var result: String?
+        
+        Just(Optional<String>.none)
+            .compactMap({ $0 })
+            .replaceEmpty(Just(Optional<String>.none).compactMap({ $0 }))
+            .replaceEmpty(Just("5"))
+            .sink(receiveValue: { result = $0 })
+            .store(in: &cancellable)
+        
+        XCTAssertEqual(result, "5")
+    }
+    
+    func testReplaceErrorHandling() {
+        var cancellable = Set<AnyCancellable>()
+        var result: String?
+        
+        Result<String, Error>.Publisher(.failure(NSError(domain: "Internal", code: 0, userInfo: nil)))
             .replaceEmpty(Result.Publisher("5"))
             .replaceError(Just("4"))
-            .sink(receiveCompletion: { _ in }, receiveValue: { result = $0 })
+            .sink(receiveValue: { result = $0 })
+            .store(in: &cancellable)
+        
+        XCTAssertEqual(result, "4")
+    }
+    
+    func testReplaceErrorNotHandling() {
+        
+        var cancellable = Set<AnyCancellable>()
+        var result: String?
+        
+        Result<String, Error>.Publisher(.success("3"))
+            .replaceError(Just("4"))
+            .sink(receiveValue: { result = $0 })
+            .store(in: &cancellable)
+        
+        XCTAssertEqual(result, "3")
+    }
+    
+    func testReplaceErrorChain() {
+        
+        var cancellable = Set<AnyCancellable>()
+        var result: String?
+        
+        Result<String, Error>.Publisher(.failure(NSError(domain: "Internal", code: 0, userInfo: nil)))
+            .replaceError(Result.Publisher(.failure(NSError(domain: "Another", code: 0, userInfo: nil))))
+            .replaceError(Just("4"))
+            .sink(receiveValue: { result = $0 })
             .store(in: &cancellable)
         
         XCTAssertEqual(result, "4")
     }
     
     static var allTests = [
-        ("testReplaceEmpty", testReplaceEmpty),
+        ("testReplaceEmptyHandling", testReplaceEmptyHandling),
     ]
 }

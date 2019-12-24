@@ -4,7 +4,7 @@
 
 # CombineReplaceWithPublisher
 
-Implementation of two Publishers. First one for catching empty result and transforming it into new sequence, second for catching error result.
+Implementation of Publisher for catching empty result and transforming it into new sequence.
 
 ## Usage
 
@@ -18,27 +18,6 @@ possibleEmptyPublisher
     .sink(...)
     .store(in: &cancellable)
 
-```
-
-```swift
-// If possibleErrorPublisher will complete with error, handlingPublisher will be used.
-
-let handlingPublisher = Result.Publisher<Int, Error>(.success(5)) // For example
-
-possibleErrorPublisher
-    .replaceError(handlingPublisher)
-    .sink(...)
-    .store(in: &cancellable)
-```
-
-You alse could chain error and ampty handling:
-
-```swift
-// secondAttemptToRecover will be used if both possibleErrorPublisher and handlingPublisher will emit error
-
-possibleErrorPublisher
-    .replaceError(handlingPublisher)
-    .replaceError(secondAttemptToRecoverPublisher)
 ```
 
 ### Installation

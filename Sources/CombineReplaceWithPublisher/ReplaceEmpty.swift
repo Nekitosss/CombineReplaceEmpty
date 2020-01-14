@@ -42,7 +42,7 @@ extension Publishers.ReplaceEmptyWithPublisher {
         
         private var replacingPublisher: ReplacingPublisher
         private var originalPublisher: OriginalPublisher
-        private let subscriber: S
+        private var subscriber: S?
         
         private var subscription: Subscription?
         
@@ -59,6 +59,7 @@ extension Publishers.ReplaceEmptyWithPublisher {
         }
         
         func cancel() {
+			subscriber = nil
             subscription?.cancel()
             subscription = nil
         }
@@ -70,18 +71,20 @@ extension Publishers.ReplaceEmptyWithPublisher {
         
         func receive(_ input: OriginalPublisher.Output) -> Subscribers.Demand {
             didReceiveAtLeastOneValue = true
-            return subscriber.receive(input)
+			return subscriber?.receive(input) ?? .none
         }
         
         func receive(completion: Subscribers.Completion<OriginalPublisher.Failure>) {
             switch completion {
             case .failure,
                  .finished where didReceiveAtLeastOneValue:
-                subscriber.receive(completion: completion)
+                subscriber?.receive(completion: completion)
                 subscription = nil
             default:
-                let fallthroughSubscriber = FallthroughSubscriber(subscriber: subscriber)
-                replacingPublisher.receive(subscriber: fallthroughSubscriber)
+				if let subscriber = self.subscriber {
+					let fallthroughSubscriber = FallthroughSubscriber(subscriber: subscriber)
+					replacingPublisher.receive(subscriber: fallthroughSubscriber)
+				}
                 subscription = nil
             }
         }
